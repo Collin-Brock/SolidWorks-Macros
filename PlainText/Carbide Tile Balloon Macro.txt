@@ -1,0 +1,78 @@
+' ******************************************************************************
+' C:\Users\cbrockman\AppData\Local\Temp\swx13320\Macro1.swb - Created by Collin Brockman
+' ******************************************************************************
+'Start Function no Parameters in or out
+Option Explicit
+Sub main()
+    'If the Macro causes a SolidWorks Error Skip to ErrorMsg: Line
+    On Error GoTo ErrorMsg
+    'Initalize App and File to current instance
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+    'Check if the instance is running
+    If swModel Is Nothing Then
+        swApp.SendMsgToUser ("ERROR 1002: No Open File")
+        Exit Sub
+    End If
+    'Check if the File type is a Drawing
+    If swModel.GetType <> swDocumentTypes_e.swDocDRAWING Then
+        swApp.SendMsgToUser ("ERROR 1001: Wrong File Type")
+        Exit Sub
+    End If
+    'Initalize Selection Manager
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Set swSelMgr = swModel.SelectionManager
+    'Create Balloon Settings
+    Dim BomBalloonParams As SldWorks.BalloonOptions
+    Set BomBalloonParams = swModel.Extension.CreateBalloonOptions()
+    BomBalloonParams.Style = 0
+    BomBalloonParams.Size = 2
+    BomBalloonParams.UpperTextContent = 1
+    BomBalloonParams.UpperText = """"
+    BomBalloonParams.ShowQuantity = False
+    BomBalloonParams.QuantityPlacement = 1
+    BomBalloonParams.QuantityDenotationText = "X"
+    BomBalloonParams.QuantityOverride = False
+    'Check if there is an object selected
+    If swSelMgr.GetSelectedObject(1) Is Nothing Then
+        swApp.SendMsgToUser ("Error 1003: Nothing Selected")
+        Exit Sub
+    End If
+    'Check if more than two object is selected (view and component)
+    If swSelMgr.GetSelectedObjectCount2(0) > 2 Then
+        swApp.SendMsgToUser ("Error 1004: More Object Than One Selected")
+        Exit Sub
+    End If
+    'Check if less than one object is selected (view)
+    If swSelMgr.GetSelectedObjectCount2(0) < 2 Then
+        swApp.SendMsgToUser ("Error 1005: Nothing Selected")
+        Exit Sub
+    'Check if object type is view component
+    End If
+    If swSelMgr.GetSelectedObjectType3(1, 0) <> 12 Then
+        swApp.SendMsgToUser ("Error 1006: Incorrect Object Selected")
+        Exit Sub
+    End If
+    'Create Balloon as a Note uses settings from definition
+    Dim Balloon As SldWorks.Note
+    Set Balloon = swModel.Extension.InsertBOMBalloon2(BomBalloonParams)
+    'Reinitilze Balloon as an Annotation to change leader
+    Dim BalloonasAnn As SldWorks.Annotation
+    Set BalloonasAnn = Balloon.GetAnnotation
+    'Get the Balloons Intial Position
+    Dim b As Variant
+    b = BalloonasAnn.GetPosition()
+    'Remove Ballon Leader
+    Dim a As Long
+    a = BalloonasAnn.SetLeader3(swLeaderStyle_e.swNO_LEADER, 2, False, False, False, False)
+    'Change Balloon Position to Oringinal - Default Leader
+    'THIS VALUE COULD CHANGE; UPDATE VALUE IF BALLOON IS NOT CENTERED WITH SELECTION POINT
+    a = BalloonasAnn.SetPosition2(b(0) - 0.015, b(1) - 0.011, 0)
+Exit Sub
+'Create General Error Message
+ErrorMsg:
+    swApp.SendMsgToUser ("ERROR 1000: Failed to Create Ballon")
+'End Function
+End Sub

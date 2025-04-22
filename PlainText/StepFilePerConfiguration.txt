@@ -1,0 +1,29 @@
+' ******************************************************************************
+' Created By Collin Brockman
+' ******************************************************************************
+Dim STEPPATH As String
+STEPPATH = ""
+Dim swApp As Object
+
+Dim PartDoc As SldWorks.ModelDoc2
+Dim Part As SldWorks.ModelDoc2
+Dim boolstatus As Boolean
+Dim longstatus As Long, longwarnings As Long
+Public Grind As Boolean
+Public ViewFront As Boolean
+Public Sub main()
+Set swApp = Application.SldWorks
+Set PartDoc = swApp.ActiveDoc
+Dim Path As String
+Path = PartDoc.GetPathName
+
+'Get Configuration Names
+ReDim swConfigNames(PartDoc.GetConfigurationCount) As String
+swConfigNames = PartDoc.GetConfigurationNames()
+Dim a As Integer
+For a = 0 To UBound(swConfigNames)
+    PartDoc.ShowConfiguration2 (swConfigNames(a))
+    Path = STEPPATH + "\" + swConfigNames(a) + ".STEP"
+    boolstatus = PartDoc.SaveAs4(Path, swSaveAsVersion_e.swSaveAsCurrentVersion, 2, longwarnings, longwarnings)
+Next
+End Sub

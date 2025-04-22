@@ -1,0 +1,73 @@
+' ******************************************************************************
+' Created By Collin Brockman
+' Create a PIB based on current model view
+' ******************************************************************************
+Dim FORMATPATH As String
+FORMATPATH = ""
+Option Explicit
+Dim swApp As Object
+
+Dim swModel As SldWorks.ModelDoc2
+Dim boolstatus As Boolean
+Dim longstatus As Long, longwarnings As Long
+Public Sub main()
+Set swApp = Application.SldWorks
+Set swModel = swApp.ActiveDoc
+
+'Document Settings
+Dim swSheetHeight As Double
+swSheetHeight = 11 * 0.0254
+Dim swSheetWidth As Double
+swSheetWidth = 17 * 0.0254
+Dim swSheetOff As Double
+swSheetOff = 1 * 0.0254
+Dim ScaleNum As Integer
+ScaleNum = 1
+Dim ScaleDen As Integer
+ScaleDen = 2
+
+Dim PathOG As String
+PathOG = swModel.GetPathName
+'Create CUST Path Name
+Dim Path As String
+Path = swModel.GetPathName
+Dim PathArray() As String
+PathArray = Split(Path, ".")
+Path = PathArray(0)
+Path = Path + "-PIB" + ".SLDDRW"
+'Create New Document
+Set swModel = swApp.NewDocument(FORMATPATH, 12, swSheetWidth, swSheetHeight)
+    
+'Save As
+'512 save as a copy and open
+Dim LongError As Long
+Dim LongWarning As Long
+Dim swModelEx As ModelDocExtension
+Set swModelEx = swModel.Extension
+boolstatus = swModelEx.SaveAs3(Path, 0, swSaveAsOptions_e.swSaveAsOptions_CopyAndOpen, Nothing, Nothing, LongError, LongWarning)
+Set swModel = swApp.ActiveDoc
+Set swModelEx = swModel.Extension
+
+'Opens Current Sheet
+Dim swDrawing As DrawingDoc
+Set swDrawing = swModel
+Dim swSheet As Sheet
+Set swSheet = swDrawing.GetCurrentSheet()
+    '''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''''
+    swDrawing.EditTemplate
+    swModel.Extension.SelectAll
+    swModel.DeleteSelection (True)
+    swDrawing.EditSheet2
+boolstatus = swDrawing.GenerateViewPaletteViews(PathOG)
+Dim swView As SldWorks.View
+swDrawing.GetDrawingPaletteViewNames
+Set swView = swDrawing.DropDrawingViewFromPalette2("*Current", swSheetWidth * 0.5, swSheetHeight / 2, 0)
+boolstatus = swView.SetDisplayMode4(False, swDisplayMode_e.swSHADED, False, True, False)
+swView.ScaleDecimal = swView.ScaleDecimal * 2
+swModel.ForceRebuild3 (True)
+End Sub
+
+Public Function ALen(arr As Variant) As Integer
+    ALen = UBound(arr) - LBound(arr) + 1
+End Function
+

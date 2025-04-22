@@ -1,0 +1,176 @@
+' ******************************************************************************
+' Created by Collin Brockman
+' Updated 12/27/2024
+' Generate an Image from selected view
+' ******************************************************************************
+Dim IMAGEPATH As String
+IMAGEPATH = ""
+'Preconditions:
+'Open Drawing
+Option Explicit
+Dim swApp As SldWorks.SldWorks
+Dim SelMgr As Object
+Dim swFeatMgr As SldWorks.FeatureManager
+
+' Define two types
+Type DoubleRec
+    dValue As Double
+End Type
+
+Type Int2Rec
+    iLower As Long ' Assuming that a C int has 4 bytes
+    iUpper As Long
+End Type
+
+Public Sub main()
+    
+     'Setup current drawing and sheet
+    Set swApp = Application.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swDraw As SldWorks.DrawingDoc
+    Dim boolstatus As Boolean
+    Dim intstatus As Integer
+    Dim swModelEx As ModelDocExtension
+    Set swModel = swApp.ActiveDoc
+    Set swModelEx = swModel.Extension
+    
+    'Check if the instance is running
+    If swModel Is Nothing Then
+        swApp.SendMsgToUser ("ERROR 1002: No Open File")
+        Exit Sub
+    End If
+    
+    If swModel.GetType = swDocASSEMBLY Then
+        Dim swASYModel As SldWorks.AssemblyDoc
+        Set swASYModel = swApp.ActiveDoc
+
+        Dim swComp As Variant
+        Dim a As Integer
+        swComp = swASYModel.GetComponents(True)
+        For a = 0 To UBound(swComp)
+            SubSearch swComp(a)
+        Next
+        swModel.GraphicsRedraw2
+    ElseIf swModel.GetType = swDocPART Then
+        ChangeColorPart swModel
+    End If
+    
+    Dim FeatMgerWidth As Integer
+    FeatMgerWidth = swModel.GetFeatureManagerWidth
+    intstatus = swModel.SetFeatureManagerWidth(0)
+    boolstatus = swModel.SetUserPreferenceToggle(swViewDisplayHideAllTypes, True)
+    swModel.ViewZoomtofit2
+    swApp.SetUserPreferenceToggle swUserPreferenceToggle_e.swDisplayShadowsInShadedMode, False
+    swApp.SetUserPreferenceToggle swUserPreferenceToggle_e.swImageQualityApplyToAllReferencedPartDoc, True
+    swModel.SetTessellationQuality (106)
+    swModel.GraphicsRedraw2
+    
+    Set swFeatMgr = swModel.FeatureManager
+    Dim vLightProp As Variant
+    
+    Dim i2r As Int2Rec
+    Dim dr As DoubleRec
+    
+    ' Forcibly turn lights off
+    i2r.iLower = 1
+    i2r.iUpper = 1
+    LSet dr = i2r
+    
+    Dim i As Integer
+    For i = 0 To swModel.GetLightSourceCount - 1
+
+        If InStr(swModel.GetLightSourceName(i), "Ambient") > 0 Then
+    
+        vLightProp = swModel.LightSourcePropertyValues(i)
+        vLightProp(15) = 0.75
+        swModel.LightSourcePropertyValues(i) = vLightProp
+        Else
+        vLightProp = swModel.LightSourcePropertyValues(i)
+        vLightProp(17) = dr.dValue
+        swModel.LightSourcePropertyValues(i) = vLightProp
+        End If
+    Next i
+    swFeatMgr.UpdateFeatureTree
+    swModel.GraphicsRedraw2
+    
+     'Create Path Name
+    Dim Path As String
+    Path = swModel.GetPathName
+    Dim PathArray() As String
+    PathArray = Split(Path, ".")
+    Path = PathArray(0)
+    PathArray = Split(Path, "\")
+    Path = PathArray(UBound(PathArray))
+    Dim Path2 As String
+    Path2 = IMAGEPATH + Path + "-png" + ".png"
+    Dim Path3 As String
+    Path3 = IMAGEPATH + Path + "-jpg" + ".jpg"
+    'Save As
+    '2 save as a copy
+    Dim LongError As Long
+    Dim LongWarning As Long
+    boolstatus = swModelEx.SaveAs3(Path2, 0, 2, Nothing, Nothing, LongError, LongWarning)
+    boolstatus = swModelEx.SaveAs3(Path3, 0, 2, Nothing, Nothing, LongError, LongWarning)
+    
+    
+    boolstatus = swModelEx.SetUserPreferenceInteger(swUserPreferenceIntegerValue_e.swImageQualityShaded, swUserPreferenceOption_e.swDetailingNoOptionSpecified, swImageQualityShaded_e.swShadedImageQualityFine)
+    intstatus = swModel.SetFeatureManagerWidth(FeatMgerWidth)
+End Sub
+Public Sub ChangeColor(swComp)
+    Dim vColor(8) As Double
+    vColor(0) = 0 / 255# 'R
+    vColor(1) = 0 / 255# 'G
+    vColor(2) = 0 / 255# 'B
+    vColor(3) = 1
+    vColor(4) = 1
+    vColor(5) = 0.5
+    vColor(6) = 0.3125
+    vColor(7) = 0
+    vColor(8) = 0
+    If swComp.GetSelectByIDString Like "*CAR*" Then
+        vColor(0) = 100 / 255# 'R
+        vColor(1) = 100 / 255# 'G
+        vColor(2) = 100 / 255# 'B
+        swComp.MaterialPropertyValues = vColor
+    Else
+        vColor(0) = 255 / 255# 'R
+        vColor(1) = 0 / 255# 'G
+        vColor(2) = 0 / 255# 'B
+        swComp.MaterialPropertyValues = vColor
+    End If
+End Sub
+Public Sub ChangeColorPart(swPart)
+    Dim vColor(8) As Double
+    vColor(0) = 0 / 255# 'R
+    vColor(1) = 0 / 255# 'G
+    vColor(2) = 0 / 255# 'B
+    vColor(3) = 1
+    vColor(4) = 1
+    vColor(5) = 0.5
+    vColor(6) = 0.3125
+    vColor(7) = 0
+    vColor(8) = 0
+    If swPart.GetPathName Like "*CAR*" Then
+        vColor(0) = 100 / 255# 'R
+        vColor(1) = 100 / 255# 'G
+        vColor(2) = 100 / 255# 'B
+        swPart.MaterialPropertyValues = vColor
+    Else
+        vColor(0) = 255 / 255# 'R
+        vColor(1) = 0 / 255# 'G
+        vColor(2) = 0 / 255# 'B
+        swPart.MaterialPropertyValues = vColor
+    End If
+End Sub
+Public Sub SubSearch(swComp)
+Dim b As Integer
+Dim swCompChild As Variant
+    If swComp.GetType = swDocumentTypes_e.swDocASSEMBLY Then
+        swCompChild = swComp.GetChildren
+        For b = 0 To UBound(swCompChild)
+            SubSearch swCompChild(b)
+        Next
+    Else
+    ChangeColor swComp
+    End If
+End Sub

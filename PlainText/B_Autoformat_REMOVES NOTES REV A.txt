@@ -1,0 +1,87 @@
+' ******************************************************************************
+' Created by Collin Brockman
+' Sets Sheet Format to GET-B
+' Removes insp: and REF
+' ******************************************************************************
+'Preconditions:
+Dim FORMATPATH As String
+FORMATPATH =""
+'Open Drawing
+Option Explicit
+Dim swApp As SldWorks.SldWorks
+Sub main()
+    'Setup current drawing and sheet
+    Set swApp = Application.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Dim swDraw As SldWorks.DrawingDoc
+    Set swModel = swApp.ActiveDoc
+    Set swDraw = swModel
+    
+    'Check if the instance is running
+    If swModel Is Nothing Then
+        swApp.SendMsgToUser ("ERROR 1002: No Open File")
+        Exit Sub
+    End If
+    
+    'Check if the File type is a Drawing
+    If swModel.GetType <> swDocumentTypes_e.swDocDRAWING Then
+        swApp.SendMsgToUser ("ERROR 1001: Wrong File Type")
+        Exit Sub
+    End If
+    
+    'Get All Sheets by Name
+    Dim swSheetNames As Variant
+    swSheetNames = swDraw.GetSheetNames
+    
+    'For Loop Over each Sheet
+    Dim i As Integer
+    For i = 0 To UBound(swSheetNames)
+        Dim BoolStatus As Boolean
+        BoolStatus = swDraw.ActivateSheet(swSheetNames(i))
+        If BoolStatus = True Then
+            swApp.SendMsgToUser ("Error 1003: Sheet Not Activated")
+            Exit Sub
+        End If
+        Dim swSheet As SldWorks.Sheet
+        Set swSheet = swDraw.GetCurrentSheet
+        'Get Sheet Properties and set sheet properties to the same except the template is GET-B *Notes are Deleted*
+        Dim swSheetProp As Variant
+        swSheetProp = swSheet.GetProperties2
+        BoolStatus = swDraw.SetupSheet5(swSheetNames(i), swSheetProp(0), 12, swSheetProp(2), swSheetProp(3), swSheetProp(4), FORMATPATH, swSheetProp(5), swSheetProp(6), swSheetProp(7), True)
+        swSheet.ReloadTemplate (False)
+    
+    'Get all views
+    Dim vViews As Variant
+    vViews = swSheet.GetViews
+    'For each veiw
+    Dim i As Integer
+    For i = 0 To UBound(vViews)
+        Dim swView As SldWorks.View
+        Set swView = vViews(i)
+        'Get first dimension
+        Dim swDispDim As SldWorks.DisplayDimension
+        Set swDispDim = swView.GetFirstDisplayDimension5()
+        Dim swDispDimA As Object
+        'Iterate through each dimension
+        While Not swDispDim Is Nothing
+            If swDispDim.GetText(swDimensionTextParts_e.swDimensionTextCalloutAbove) Like "*insp:*" Then
+                swDispDim.SetText swDimensionTextParts_e.swDimensionTextCalloutAbove, ""
+            End If
+            If swDispDim.GetText(swDimensionTextParts_e.swDimensionTextPrefix) Like "*insp:*" Then
+                swDispDim.SetText swDimensionTextParts_e.swDimensionTextPrefix, ""
+            End If
+            If swDispDim.GetText(swDimensionTextParts_e.swDimensionTextCalloutBelow) Like "*REF*" Then
+                swDispDim.SetText swDimensionTextParts_e.swDimensionTextCalloutBelow, ""
+                swDispDim.ShowParenthesis = True
+            End If
+            If swDispDim.GetText(swDimensionTextParts_e.swDimensionTextSuffix) Like "*REF*" Then
+                swDispDim.SetText swDimensionTextParts_e.swDimensionTextSuffix, ""
+                swDispDim.ShowParenthesis = True
+            End If
+            Set swDispDim = swDispDim.GetNext5
+        Wend
+Next
+Next
+'Rebuild document
+swModel.ForceRebuild3 (True)
+End Sub

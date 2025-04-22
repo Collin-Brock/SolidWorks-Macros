@@ -1,0 +1,31 @@
+' ******************************************************************************
+' Created by Collin Brockman 12/27/2024
+' Decrease Precision
+' Gets any Selected Dimensions and Increments the Precision Down
+' ******************************************************************************
+'Start Function no Parameters in or out
+Option Explicit
+Dim boolstatus As Boolean
+Dim longstatus As Integer
+Sub main()
+    'Initalize App and File to current instance
+    Dim swApp As SldWorks.SldWorks
+    Dim swModel As SldWorks.ModelDoc2
+    Set swApp = Application.SldWorks
+    Set swModel = swApp.ActiveDoc
+    'Call Selection Manager
+    Dim swSelMgr As SldWorks.SelectionMgr
+    Set swSelMgr = swModel.SelectionManager
+    Dim i As Integer
+    For i = 0 To swSelMgr.GetSelectedObjectCount2(-1)
+        If swSelMgr.GetSelectedObjectType3(i, -1) = swSelectType_e.swSelDIMENSIONS Then
+            Dim swDispDim As SldWorks.DisplayDimension
+            Set swDispDim = swSelMgr.GetSelectedObject6(i, -1)
+            Dim dimset As Long
+            'Set Dimension Tolerance Setting
+            dimset = swDimensionPrecisionSettings_e.swDoNotChangePrecisionSetting
+            longstatus = swDispDim.SetPrecision3(swDispDim.GetPrimaryPrecision2 - 1, dimset, dimset, dimset)
+    End If
+    Next
+    swModel.GraphicsRedraw2
+End Sub
